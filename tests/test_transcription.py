@@ -81,7 +81,7 @@ def test_transcribe_video(mock_openai_class):
                     service = TranscriptionService()
                     
                     # Mock FFmpegWrapper.extract_audio to do nothing
-                    with patch('transcription.FFmpegWrapper') as mock_ffmpeg:
+                    with patch('ffmpeg_wrapper.FFmpegWrapper') as mock_ffmpeg:
                         mock_ffmpeg_instance = MagicMock()
                         mock_ffmpeg.return_value = mock_ffmpeg_instance
                         

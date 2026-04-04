@@ -135,18 +135,19 @@ class FFmpegWrapper:
             
             duration = self.get_duration(input_path)
             
-            for line in process.stderr:
-                if progress_callback and duration > 0:
-                    time_match = re.search(r"time=(\d+):(\d+):(\d+\.\d+)", line)
-                    if time_match:
-                        hours, minutes, seconds = time_match.groups()
-                        current_time = (
-                            int(hours) * 3600 +
-                            int(minutes) * 60 +
-                            float(seconds)
-                        )
-                        progress = (current_time / duration) * 100
-                        progress_callback(progress)
+            if process.stderr:
+                for line in process.stderr:
+                    if progress_callback and duration > 0:
+                        time_match = re.search(r"time=(\d+):(\d+):(\d+\.\d+)", line)
+                        if time_match:
+                            hours, minutes, seconds = time_match.groups()
+                            current_time = (
+                                int(hours) * 3600 +
+                                int(minutes) * 60 +
+                                float(seconds)
+                            )
+                            progress = (current_time / duration) * 100
+                            progress_callback(progress)
             
             process.wait()
             
