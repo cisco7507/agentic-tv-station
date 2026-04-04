@@ -471,35 +471,59 @@ CMD ["python3", "cli.py"]
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| `Unsupported format: .xyz` | File extension not supported | Use supported format |
-| `File not found: /path` | File doesn't exist | Check path is correct |
-| `ffmpeg not found` | FFmpeg not installed | Install FFmpeg |
-| `API key required` | OPENAI_API_KEY not set | Set environment variable |
-| `Transcription failed` | API error or network issue | Check API key and connectivity |
+| `Unsupported format: .xyz` | File extension not supported | Use supported format (.mp4, .mov, .avi, .mkv, .webm, .flv, .wmv for video; .mp3, .wav, .flac, .aac, .ogg, .m4a, .wma for audio) |
+| `File not found: /path` | File doesn't exist | Check path is correct and file is accessible |
+| `ffmpeg not found` | FFmpeg not installed | Install FFmpeg (see Prerequisites section) |
+| `API key required` | OPENAI_API_KEY not set | Set environment variable: `export OPENAI_API_KEY="your-key-here"` |
+| `Transcription failed` | API error or network issue | Check API key validity and internet connectivity |
+| `Permission denied` | Insufficient file permissions | Check file permissions or run with appropriate user rights |
+| `Storage path not found` | STORAGE_PATH directory doesn't exist | Create directory or set valid STORAGE_PATH environment variable |
+| `CUDA out of memory` | GPU memory exhausted (if using GPU) | Reduce batch size or use CPU-only mode |
+| `Segmentation fault` | FFmpeg compatibility issue | Update FFmpeg to latest version or try different build |
+| `No space left on device` | Disk storage full | Clean up temporary files or increase storage capacity |
 
 ### Debug Steps
 
 1. **Check FFmpeg installation:**
-   ```bash
-   ffmpeg -version
-   ffprobe -version
-   ```
+    ```bash
+    ffmpeg -version
+    ffprobe -version
+    ```
 
-2. **Verify environment:**
-   ```bash
-   echo $OPENAI_API_KEY
-   ```
+2. **Verify environment variables:**
+    ```bash
+    echo $OPENAI_API_KEY
+    echo $STORAGE_PATH
+    echo $TEMP
+    ```
 
 3. **Test imports:**
-   ```python
-   python3 -c "from ffmpeg_wrapper import FFmpegWrapper; print('OK')"
-   ```
+    ```python
+    python3 -c "from ingest import ingest_file; print('Import OK')"
+    python3 -c "from ffmpeg_wrapper import FFmpegWrapper; print('Import OK')"
+    python3 -c "from transcription import TranscriptionService; print('Import OK')"
+    ```
 
-4. **Run with verbose logging:**
-   ```bash
-   cd /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station
-   python3 -u /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station/cli.py process video.mp4 --output-dir ./output 2>&1
-   ```
+4. **Check storage directory:**
+    ```bash
+    ls -la $STORAGE_PATH
+    ```
+
+5. **Test with minimal command:**
+    ```bash
+    python3 /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station/cli.py ingest test.mp4 --format-info
+    ```
+
+6. **Run with verbose logging:**
+    ```bash
+    cd /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station
+    python3 -u /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station/cli.py process video.mp4 --output-dir ./output 2>&1
+    ```
+
+7. **Check Python version:**
+    ```bash
+    python3 --version
+    ```
 
 ---
 
@@ -521,6 +545,40 @@ All modules are self-contained. Changes take effect immediately on next run.
 2. Update CLI in `cli.py` if needed
 3. Add MCP tool in `mcp_server.py` if needed
 4. Update this documentation
+
+---
+
+## 15.5 Best Practices
+
+For optimal performance and reliability when using the Agentic TV Station:
+
+### Performance Optimization
+- Use SSD storage for faster read/write operations
+- Process shorter videos (<10min) for quicker turnaround
+- Set appropriate clip durations (5-60 seconds) for useful segments
+- Use language specification in transcription for better accuracy
+- Monitor system resources during processing (CPU, memory, disk I/O)
+
+### Quality Assurance
+- Always validate input files before processing
+- Check transcription accuracy for critical applications
+- Verify extracted clips contain expected content
+- Keep backup of original media files
+- Test processing pipeline with sample files before batch operations
+
+### Security Considerations
+- Never commit API keys to version control
+- Use environment variables or secure secret management for credentials
+- Restrict file system permissions on storage directories
+- Validate file paths to prevent path traversal attacks
+- Consider implementing authentication for MCP server in production
+
+### Maintenance Tips
+- Regularly clean temporary files to prevent disk space issues
+- Monitor storage usage and implement rotation policies
+- Keep FFmpeg and Python dependencies updated
+- Log processing activities for audit and debugging purposes
+- Schedule regular health checks of the system
 
 ---
 
@@ -587,21 +645,47 @@ cd /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b
 
 # Set your OpenAI API key
 export OPENAI_API_KEY="your-key-here"
+
+# Optional: Set custom storage path (defaults to ./storage)
+export STORAGE_PATH="./storage"
 ```
 
 ### Step 3: Try It Out
 
-**Process a video:**
+**Option 1: Process a video with full pipeline**
 ```bash
 cd /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station
-python3 /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station/cli.py process your_video.mp4 --output-dir ./output
+python3 /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station/cli.py process your_video.mp4 --output-dir ./output --extract-clips
 ```
 
 This will:
 1. Check your video file
 2. Extract the audio
 3. Convert speech to text
-4. Save everything to the `./output` folder
+4. Extract clips based on natural boundaries (silence/speaker changes)
+5. Save everything to the `./output` folder
+
+**Option 2: Just transcribe a video**
+```bash
+cd /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station
+python3 /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station/cli.py transcribe your_video.mp4 --language en --output transcript.txt
+```
+
+This will:
+1. Extract audio from your video
+2. Convert speech to text using Whisper
+3. Save the transcript to `transcript.txt`
+
+**Option 3: Extract clips from an existing transcript**
+```bash
+cd /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station
+python3 /home/gsp/.paperclip/instances/default/projects/eb13f383-9e2c-4711-8a39-b652b63765a9/8a70604c-699b-4d90-9ea6-536c65658aa5/agentic-tv-station/cli.py extract-clips your_video.mp4 transcript.json --output-dir ./clips
+```
+
+This will:
+1. Use the provided transcript to find natural clip boundaries
+2. Extract video clips at those boundaries
+3. Save clips to the `./clips` folder
 
 **That's it!** The system handles all the technical details.
 
@@ -622,6 +706,14 @@ This will:
 | MCP | Protocol for AI assistants to use tools |
 | Chunk | A piece of a large file |
 | Codec | The way a video/audio file is encoded |
+| FFmpeg | Multimedia framework for processing video/audio |
+| FFprobe | Tool for analyzing multimedia streams |
+| API | Application Programming Interface for software communication |
+| CLI | Command-Line Interface for text-based commands |
+| STORAGE_PATH | Environment variable defining where files are stored |
+| OPENAI_API_KEY | Authentication key for OpenAI services |
+| Virtual Environment | Isolated Python environment for dependencies |
+| Webhook | HTTP callback for real-time notifications |
 
 ---
 
